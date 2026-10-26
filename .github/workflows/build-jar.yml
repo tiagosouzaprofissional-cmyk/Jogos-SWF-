@@ -1,0 +1,62 @@
+name: Gerar Jogo J2ME (.jar para Nokia X2-01)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-j2me:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar JDK 8 e suporte 32-bit para o Preverifier da Sun
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y openjdk-8-jdk libc6:i386 libstdc++6:i386 zlib1g:i386 zip unzip wget
+
+      - name: Configurar SDK J2ME (CLDC 1.1 / MIDP 2.0 + ProGuard Preverifier)
+        run: |
+          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-cldc/2.0.4/microemu-cldc-2.0.4.jar -O cldc.jar
+          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-midp/2.0.4/microemu-midp-2.0.4.jar -O midp.jar
+          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-jsr-135/2.0.4/microemu-jsr-135-2.0.4.jar -O mmapi.jar
+          wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base-6.2.2.jar -O proguard.jar
+
+      - name: Compilar, Preverificar (S40) e Empacotar KongRun.jar
+        run: |
+          mkdir -p build classes
+          /usr/lib/jvm/java-8-openjdk-amd64/bin/javac -source 1.3 -target 1.1 \
+            -bootclasspath cldc.jar:midp.jar:mmapi.jar \
+            -d build KongRunMIDlet.java
+
+          cat << 'EOF' > MANIFEST.MF
+          Manifest-Version: 1.0
+          MIDlet-Name: Kong Run
+          MIDlet-Version: 1.0.0
+          MIDlet-Vendor: BambuGames
+          MIDlet-1: Kong Run, , KongRunMIDlet
+          MicroEdition-Profile: MIDP-2.0
+          MicroEdition-Configuration: CLDC-1.1
+          Nokia-MIDlet-Category: Game
+          EOF
+
+          /usr/lib/jvm/java-8-openjdk-amd64/bin/jar cvfm raw.jar MANIFEST.MF -C build .
+
+          # O ProGuard com -microedition faz a Preverificação exata exigida pelo Nokia X2-01
+          java -jar proguard.jar \
+            -injars raw.jar \
+            -outjars KongRun.jar \
+            -libraryjars cldc.jar:midp.jar:mmapi.jar \
+            -microedition \
+            -dontshrink \
+            -dontoptimize \
+            -dontobfuscate \
+            -keep "public class KongRunMIDlet"
+
+      - name: Disponibilizar KongRun.jar para Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: KongRun-Nokia-X2-01-JAR
+          path: KongRun.jar
