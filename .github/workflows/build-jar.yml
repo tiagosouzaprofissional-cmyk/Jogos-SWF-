@@ -1,4 +1,4 @@
-name: Gerar Jogo J2ME (.jar para Nokia X2-01)
+name: Gerar KongRun.jar
 
 on:
   push:
@@ -10,43 +10,54 @@ permissions:
   contents: write
 
 jobs:
-  build-j2me:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar código do repositório
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Instalar Java 8 Oficial
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '8'
 
-      - name: Baixar bibliotecas J2ME (CLDC 1.1 / MIDP 2.0 / MMAPI)
+      - name: Compilar e Empacotar KongRun.jar
         run: |
-          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-cldc/2.0.4/microemu-cldc-2.0.4.jar -O cldc.jar
-          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-midp/2.0.4/microemu-midp-2.0.4.jar -O midp.jar
-          wget -q https://repo1.maven.org/maven2/org/microemu/microemu-jsr-135/2.0.4/microemu-jsr-135-2.0.4.jar -O mmapi.jar
-          wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base.jar -O proguard.jar || wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base-6.2.2.jar -O proguard.jar
+          # 1. Descarrega as APIs oficiais do J2ME (CLDC 1.1 e MIDP 2.0)
+          curl -sL https://repo1.maven.org/maven2/org/microemu/microemu-cldc/2.0.4/microemu-cldc-2.0.4.jar -o cldc.jar
+          curl -sL https://repo1.maven.org/maven2/org/microemu/microemu-midp/2.0.4/microemu-midp-2.0.4.jar -o midp.jar
 
-      - name: Compilar, Preverificar (S40) e Gerar KongRun.jar
-        run: |
+          # 2. Descarrega o ProGuard completo com suporte a J2ME Preverifier
+          curl -sL https://github.com/Guardsquare/proguard/releases/download/v6.2.2/proguard6.2.2.tar.gz -o pg.tar.gz
+          tar -xzf pg.tar.gz
+
+          # 3. Remove o import javax.microedition.media caso ainda esteja no ficheiro .java
+          sed -i 's/import javax.microedition.media.\*;//g' KongRunMIDlet.java
+          sed -i 's/Manager.playTone(note, duration, 80);/Display.getDisplay(midlet).vibrate(20);/g' KongRunMIDlet.java
+
+          # 4. Compila para Java 1.1 / 1.3
           mkdir -p build
-          javac -source 1.3 -target 1.1 -bootclasspath cldc.jar:midp.jar:mmapi.jar -d build KongRunMIDlet.java
-          printf "Manifest-Version: 1.0\nMIDlet-Name: Kong Run\nMIDlet-Version: 1.0.0\nMIDlet-Vendor: TiagoGames\nMIDlet-1: Kong Run, , KongRunMIDlet\nMicroEdition-Profile: MIDP-2.0\nMicroEdition-Configuration: CLDC-1.1\n" > MANIFEST.MF
-          jar cvfm raw.jar MANIFEST.MF -C build .
-          java -jar proguard.jar -injars raw.jar -outjars KongRun.jar -libraryjars cldc.jar:midp.jar:mmapi.jar -microedition -dontshrink -dontoptimize -dontobfuscate -keep "public class KongRunMIDlet"
+          javac -source 1.3 -target 1.1 -bootclasspath cldc.jar:midp.jar -d build KongRunMIDlet.java
 
-      - name: Salvar KongRun.jar direto na página inicial do seu GitHub
+          # 5. Cria o Manifesto J2ME
+          printf "Manifest-Version: 1.0\r\nMIDlet-Name: Kong Run\r\nMIDlet-Version: 1.0.0\r\nMIDlet-Vendor: TiagoGames\r\nMIDlet-1: Kong Run, , KongRunMIDlet\r\nMicroEdition-Profile: MIDP-2.0\r\nMicroEdition-Configuration: CLDC-1.1\r\n" > MANIFEST.MF
+
+          jar cvfm raw.jar MANIFEST.MF -C build .
+
+          # 6. Preverifica as classes para o Nokia X2-01 (S40)
+          java -jar proguard6.2.2/lib/proguard.jar \
+            -injars raw.jar \
+            -outjars KongRun.jar \
+            -libraryjars cldc.jar:midp.jar \
+            -microedition \
+            -dontshrink \
+            -dontoptimize \
+            -dontobfuscate \
+            -keep "public class KongRunMIDlet"
+
+      - name: Guardar KongRun.jar na pasta principal
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add KongRun.jar
-          git commit -m "Jogo KongRun.jar compilado e pronto para baixar" || echo "Sem alteracoes"
+          git commit -m "Adicionar KongRun.jar compilado" || true
           git push
-
-      - name: Disponibilizar nos Artifacts também
-        uses: actions/upload-artifact@v4
-        with:
-          name: KongRun-Nokia-X2-01-JAR
-          path: KongRun.jar
