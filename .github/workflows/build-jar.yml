@@ -2,7 +2,12 @@ name: Gerar Jogo J2ME (.jar para Nokia X2-01)
 
 on:
   push:
+    paths-ignore:
+      - 'KongRun.jar'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-j2me:
@@ -11,51 +16,36 @@ jobs:
       - name: Baixar código do repositório
         uses: actions/checkout@v4
 
-      - name: Instalar JDK 8 e suporte 32-bit para o Preverifier da Sun
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install -y openjdk-8-jdk libc6:i386 libstdc++6:i386 zlib1g:i386 zip unzip wget
+      - name: Instalar Java 8 Oficial
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
 
-      - name: Configurar SDK J2ME (CLDC 1.1 / MIDP 2.0 + ProGuard Preverifier)
+      - name: Baixar bibliotecas J2ME (CLDC 1.1 / MIDP 2.0 / MMAPI)
         run: |
           wget -q https://repo1.maven.org/maven2/org/microemu/microemu-cldc/2.0.4/microemu-cldc-2.0.4.jar -O cldc.jar
           wget -q https://repo1.maven.org/maven2/org/microemu/microemu-midp/2.0.4/microemu-midp-2.0.4.jar -O midp.jar
           wget -q https://repo1.maven.org/maven2/org/microemu/microemu-jsr-135/2.0.4/microemu-jsr-135-2.0.4.jar -O mmapi.jar
-          wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base-6.2.2.jar -O proguard.jar
+          wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base.jar -O proguard.jar || wget -q https://repo1.maven.org/maven2/net/sf/proguard/proguard-base/6.2.2/proguard-base-6.2.2.jar -O proguard.jar
 
-      - name: Compilar, Preverificar (S40) e Empacotar KongRun.jar
+      - name: Compilar, Preverificar (S40) e Gerar KongRun.jar
         run: |
-          mkdir -p build classes
-          /usr/lib/jvm/java-8-openjdk-amd64/bin/javac -source 1.3 -target 1.1 \
-            -bootclasspath cldc.jar:midp.jar:mmapi.jar \
-            -d build KongRunMIDlet.java
+          mkdir -p build
+          javac -source 1.3 -target 1.1 -bootclasspath cldc.jar:midp.jar:mmapi.jar -d build KongRunMIDlet.java
+          printf "Manifest-Version: 1.0\nMIDlet-Name: Kong Run\nMIDlet-Version: 1.0.0\nMIDlet-Vendor: TiagoGames\nMIDlet-1: Kong Run, , KongRunMIDlet\nMicroEdition-Profile: MIDP-2.0\nMicroEdition-Configuration: CLDC-1.1\n" > MANIFEST.MF
+          jar cvfm raw.jar MANIFEST.MF -C build .
+          java -jar proguard.jar -injars raw.jar -outjars KongRun.jar -libraryjars cldc.jar:midp.jar:mmapi.jar -microedition -dontshrink -dontoptimize -dontobfuscate -keep "public class KongRunMIDlet"
 
-          cat << 'EOF' > MANIFEST.MF
-          Manifest-Version: 1.0
-          MIDlet-Name: Kong Run
-          MIDlet-Version: 1.0.0
-          MIDlet-Vendor: BambuGames
-          MIDlet-1: Kong Run, , KongRunMIDlet
-          MicroEdition-Profile: MIDP-2.0
-          MicroEdition-Configuration: CLDC-1.1
-          Nokia-MIDlet-Category: Game
-          EOF
+      - name: Salvar KongRun.jar direto na página inicial do seu GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add KongRun.jar
+          git commit -m "Jogo KongRun.jar compilado e pronto para baixar" || echo "Sem alteracoes"
+          git push
 
-          /usr/lib/jvm/java-8-openjdk-amd64/bin/jar cvfm raw.jar MANIFEST.MF -C build .
-
-          # O ProGuard com -microedition faz a Preverificação exata exigida pelo Nokia X2-01
-          java -jar proguard.jar \
-            -injars raw.jar \
-            -outjars KongRun.jar \
-            -libraryjars cldc.jar:midp.jar:mmapi.jar \
-            -microedition \
-            -dontshrink \
-            -dontoptimize \
-            -dontobfuscate \
-            -keep "public class KongRunMIDlet"
-
-      - name: Disponibilizar KongRun.jar para Download
+      - name: Disponibilizar nos Artifacts também
         uses: actions/upload-artifact@v4
         with:
           name: KongRun-Nokia-X2-01-JAR
