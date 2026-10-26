@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kong Run: A Fúria da Selva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #06150d;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+        .font-jungle {
+            font-family: 'Bungee', cursive;
+            letter-spacing: 0.04em;
+        }
+        /* Stone & Wood Jungle UI Styling */
+        .jungle-panel {
+            background: linear-gradient(180deg, rgba(20, 42, 29, 0.92) 0%, rgba(10, 23, 16, 0.96) 100%);
+            border: 2px solid #eab308;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        .btn-jungle {
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
+            border: 2px solid #fef08a;
+            box-shadow: 0 5px 0 #78350f, 0 8px 20px rgba(0,0,0,0.6);
+            transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-jungle:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            box-shadow: 0 7px 0 #78350f, 0 12px 24px rgba(0,0,0,0.7);
+        }
+        .btn-jungle:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #78350f, 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .btn-touch {
+            background: linear-gradient(180deg, rgba(30, 58, 42, 0.85) 0%, rgba(15, 31, 22, 0.95) 100%);
+            border: 2px solid rgba(234, 179, 8, 0.6);
+            box-shadow: 0 4px 0 rgba(8, 18, 12, 0.9), 0 6px 15px rgba(0,0,0,0.5);
+            transition: transform 0.08s ease, border-color 0.15s ease;
+        }
+        .btn-touch:active, .btn-touch.active-press {
+            transform: translateY(3px) scale(0.97);
+            border-color: #fde047;
+            background: linear-gradient(180deg, rgba(234, 179, 8, 0.35) 0%, rgba(20, 45, 30, 0.95) 100%);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.5)); }
+            50% { transform: scale(1.06); filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.9)); }
+        }
+        .combo-glow {
+            animation: pulseGlow 0.9s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-between select-none overflow-hidden">
+
+    <!-- TOP HUD BAR -->
+    <header class="w-full max-w-6xl px-3 pt-3 sm:px-6 sm:pt-4 flex flex-wrap items-center justify-between gap-2 z-20 pointer-events-none">
+        <!-- Score & Distance -->
+        <div class="jungle-panel rounded-2xl px-3.5 py-2 sm:px-5 sm:py-2.5 flex items-center gap-4 sm:gap-6 pointer-events-auto">
+            <div>
+                <p class="text-[10px] sm:text-xs uppercase tracking-widest text-emerald-300 font-bold">Pontuação</p>
+                <p id="hudScore" class="font-jungle text-xl sm:text-3xl text-amber-400 leading-none mt-0.5">0</p>
+            </div>
+            <div class="h-8 w-[1px] bg-emerald-700/70"></div>
+            <div>
+                <p class="text-[10px] sm:text-xs uppercase tracking-widest text-emerald-300 font-bold">Recorde</p>
+                <p id="hudHighScore" class="font-jungle text-lg sm:text-2xl text-yellow-200 leading-none mt-0.5">0</p>
+            </div>
+            <div class="hidden sm:block h-8 w-[1px] bg-emerald-700/70"></div>
+            <div class="hidden sm:block">
+                <p class="text-[10px] sm:text-xs uppercase tracking-widest text-emerald-300 font-bold">Velocidade</p>
+                <p id="hudSpeed" class="font-jungle text-lg sm:text-2xl text-lime-400 leading-none mt-0.5">1.0x</p>
+            </div>
+        </div>
+
+        <!-- Combo Multiplier Center Badge -->
+        <div id="comboContainer" class="jungle-panel rounded-2xl px-4 py-1.5 sm:px-5 sm:py-2 flex flex-col items-center opacity-0 transition-opacity duration-200">
+            <div class="flex items-center gap-2">
+                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-amber-300">COMBO</span>
+                <span id="hudCombo" class="font-jungle text-xl sm:text-3xl text-yellow-400 combo-glow">x1</span>
+            </div>
+            <!-- Combo Decay Progress Bar -->
+            <div class="w-28 sm:w-36 h-2 bg-emerald-950 rounded-full overflow-hidden border border-amber-500/40 mt-1">
+                <div id="hudComboBar" class="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-lime-300 w-full transition-none"></div>
+            </div>
+        </div>
+
+        <!-- Bananas & Audio Controls -->
+        <div class="flex items-center gap-2 sm:gap-3 pointer-events-auto">
+            <div class="jungle-panel rounded-2xl px-3.5 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2">
+                <span class="text-lg sm:text-2xl">🍌</span>
+                <div>
+                    <p class="text-[10px] uppercase tracking-wider text-emerald-300 font-bold leading-none">Bananas</p>
+                    <p id="hudBananas" class="font-jungle text-base sm:text-xl text-yellow-300 leading-tight">0</p>
+                </div>
+            </div>
+
+            <button id="btnMute" title="Ativar/Desativar Som" class="jungle-panel rounded-2xl p-2.5 sm:p-3 text-amber-300 hover:text-yellow-200 active:scale-95 transition">
+                <!-- Speaker Icon -->
+                <svg id="iconSoundOn" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+                </svg>
+                <svg id="iconSoundOff" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 hidden text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN GAME CANVAS CONTAINER -->
+    <main class="relative flex-1 w-full flex items-center justify-center overflow-hidden my-1">
+        <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+        <!-- START / TITLE SCREEN MODAL -->
+        <div id="startModal" class="absolute inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+            <div class="jungle-panel rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center relative overflow-hidden">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-500/20 border-2 border-amber-400 mb-3 shadow-inner">
+                    <span class="text-5xl">🦍</span>
+                </div>
+                <h1 class="font-jungle text-3xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-amber-400 to-orange-600 drop-shadow">
+                    KONG RUN
+                </h1>
+                <p class="text-emerald-300 font-bold tracking-widest uppercase text-xs sm:text-sm mb-5">
+                    A Fúria da Selva • Endless Runner
+                </p>
+
+                <div class="bg-emerald-950/80 border border-emerald-700/60 rounded-2xl p-4 text-left space-y-2.5 mb-6 text-xs sm:text-sm text-emerald-100">
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 font-jungle text-amber-300 text-xs">ESPAÇO / ↑ / W</span>
+                        <span><strong>Saltar Raízes e Ruínas</strong> (Segure para salto alto!)</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 font-jungle text-amber-300 text-xs">SETA ↓ / S</span>
+                        <span><strong>Rolar / Deslizar</strong> sob troncos espinhosos e arcos</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/50 font-jungle text-amber-300 text-xs">COMBOS</span>
+                        <span>Colete 🍌 e passe raspando pelos obstáculos para multiplicar!</span>
+                    </div>
+                </div>
+
+                <button id="btnStartGame" class="btn-jungle w-full py-3.5 sm:py-4 rounded-2xl font-jungle text-xl sm:text-2xl text-amber-950 tracking-wider uppercase cursor-pointer">
+                    DOMINAR A SELVA
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER MODAL -->
+        <div id="gameOverModal" class="absolute inset-0 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4 z-30">
+            <div class="jungle-panel rounded-3xl max-w-md w-full p-6 sm:p-8 text-center transform transition-all">
+                <div class="inline-block px-3 py-1 rounded-full bg-red-500/20 border border-red-400/50 text-red-300 text-xs font-extrabold uppercase tracking-widest mb-2">
+                    Fim da Corrida
+                </div>
+                <h2 class="font-jungle text-3xl sm:text-4xl text-amber-400 mb-1">IMPACTO BRUTAL!</h2>
+                <p id="newRecordBadge" class="hidden text-xs font-extrabold uppercase tracking-widest text-lime-300 bg-lime-900/50 border border-lime-400/50 rounded-full py-1 px-3 mx-auto w-max mb-4">
+                    🏆 NOVO RECORDE DA SELVA!
+                </p>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-3 my-5">
+                    <div class="bg-emerald-950/90 border border-emerald-700/60 rounded-2xl p-3">
+                        <p class="text-[11px] uppercase text-emerald-400 font-bold">Pontuação Final</p>
+                        <p id="finalScore" class="font-jungle text-2xl sm:text-3xl text-amber-300 mt-0.5">0</p>
+                    </div>
+                    <div class="bg-emerald-950/90 border border-emerald-700/60 rounded-2xl p-3">
+                        <p class="text-[11px] uppercase text-emerald-400 font-bold">Melhor Recorde</p>
+                        <p id="finalHighScore" class="font-jungle text-2xl sm:text-3xl text-yellow-200 mt-0.5">0</p>
+                    </div>
+                    <div class="bg-emerald-950/90 border border-emerald-700/60 rounded-2xl p-3">
+                        <p class="text-[11px] uppercase text-emerald-400 font-bold">Bananas / Relíquias</p>
+                        <p id="finalBananas" class="font-jungle text-xl sm:text-2xl text-yellow-400 mt-0.5">0</p>
+                    </div>
+                    <div class="bg-emerald-950/90 border border-emerald-700/60 rounded-2xl p-3">
+                        <p class="text-[11px] uppercase text-emerald-400 font-bold">Combo Máximo</p>
+                        <p id="finalCombo" class="font-jungle text-xl sm:text-2xl text-lime-400 mt-0.5">x1</p>
+                    </div>
+                </div>
+
+                <button id="btnRestartGame" class="btn-jungle w-full py-3.5 sm:py-4 rounded-2xl font-jungle text-xl sm:text-2xl text-amber-950 tracking-wider uppercase cursor-pointer">
+                    CORRER NOVAMENTE
+                </button>
+                <p class="text-emerald-400/80 text-xs mt-3 font-medium">
+                    Pressione <span class="text-amber-300 font-bold">ESPAÇO</span> ou toque para reiniciar
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- BOTTOM CONTROL BAR (Dedicate Touch & One-Tap Buttons Outside Canvas) -->
+    <footer class="w-full max-w-4xl px-4 pb-3 pt-1 sm:pb-4 flex items-center justify-center gap-4 z-20">
+        <button id="btnSlideControl" class="btn-touch flex-1 max-w-xs py-3 sm:py-3.5 px-5 rounded-2xl flex items-center justify-center gap-3 text-amber-300 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            <div class="text-left">
+                <div class="font-jungle text-sm sm:text-lg leading-none text-amber-300">DESLIZAR / ROLAR</div>
+                <div class="text-[10px] sm:text-xs text-emerald-300 font-semibold">Seta Baixo / S</div>
+            </div>
+        </button>
+
+        <button id="btnJumpControl" class="btn-touch flex-1 max-w-xs py-3 sm:py-3.5 px-5 rounded-2xl flex items-center justify-center gap-3 text-amber-300 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+            <div class="text-left">
+                <div class="font-jungle text-sm sm:text-lg leading-none text-lime-300">SALTO GORILA</div>
+                <div class="text-[10px] sm:text-xs text-emerald-300 font-semibold">Espaço / Seta Cima</div>
+            </div>
+        </button>
+    </footer>
+
+    <script>
+        /**
+         * ============================================================================
+         * SYNTHESIZED TRIBAL & GORILLA WEB AUDIO ENGINE (No external audio files)
+         * ============================================================================
+         */
+        class JungleSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.stepToggle = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            // Heavy knuckle-walk thud
+            playFootstep(intensity = 1) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    const baseFreq = this.stepToggle ? 68 : 58;
+                    this.stepToggle = !this.stepToggle;
+
+                    osc.frequency.setValueAtTime(baseFreq * intensity, now);
+                    osc.frequency.exponentialRampToValueAtTime(22, now + 0.09);
+
+                    gain.gain.setValueAtTime(0.18 * Math.min(intensity, 1.5), now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.095);
+                } catch (e) {}
+            }
+
+            // Gorilla grunt + upward jump whoosh
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(95, now);
+                    osc.frequency.exponentialRampToValueAtTime(260, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.005, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.21);
+                } catch (e) {}
+            }
+
+            // Heavy seismic slam when landing from a jump
+            playHeavyLand() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(90, now);
+                    osc.frequency.exponentialRampToValueAtTime(18, now + 0.26);
+
+                    gain.gain.setValueAtTime(0.42, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.27);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } catch (e) {}
+            }
+
+            // Primal barrel roll / slide swoosh
+            playSlide() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const bufferSize = this.ctx.sampleRate * 0.18;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.setValueAtTime(600, now);
+                    filter.frequency.exponentialRampToValueAtTime(220, now + 0.18);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start(now);
+                } catch (e) {}
+            }
+
+            // Collectible chime (scales pitch with combo)
+            playCollect(combo = 1, isRelic = false) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = isRelic ? 'triangle' : 'sine';
+
+                    const baseNote = isRelic ? 587.33 : 440;
+                    const pitchBoost = Math.min(combo * 35, 420);
+                    osc.frequency.setValueAtTime(baseNote + pitchBoost, now);
+                    osc.frequency.setValueAtTime((baseNote + pitchBoost) * 1.25, now + 0.06);
+
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.23);
+                } catch (e) {}
+            }
+
+            // Collision crash & roar
+            playCrash() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(130, now);
+                    osc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
+
+                    gain.gain.setValueAtTime(0.45, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.48);
+                } catch (e) {}
+            }
+        }
+
+        /**
+         * ============================================================================
+         * CORE ENDLESS RUNNER GAME ENGINE (Java King Kong + Temple Run Style)
+         * ============================================================================
+         */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sound = new JungleSoundEngine();
+
+        // Persistent Storage Keys
+        const STORAGE_HIGH_SCORE = 'kong_run_high_score_v1';
+        const STORAGE_BEST_COMBO = 'kong_run_best_combo_v1';
+
+        let highScore = parseInt(localStorage.getItem(STORAGE_HIGH_SCORE) || '0', 10);
+        let bestComboRecord = parseInt(localStorage.getItem(STORAGE_BEST_COMBO) || '1', 10);
+
+        // HUD DOM Elements
+        const hudScore = document.getElementById('hudScore');
+        const hudHighScore = document.getElementById('hudHighScore');
+        const hudSpeed = document.getElementById('hudSpeed');
+        const hudBananas = document.getElementById('hudBananas');
+        const hudCombo = document.getElementById('hudCombo');
+        const hudComboBar = document.getElementById('hudComboBar');
+        const comboContainer = document.getElementById('comboContainer');
+
+        const startModal = document.getElementById('startModal');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalHighScoreEl = document.getElementById('finalHighScore');
+        const finalBananasEl = document.getElementById('finalBananas');
+        const finalComboEl = document.getElementById('finalCombo');
+        const newRecordBadge = document.getElementById('newRecordBadge');
+
+        hudHighScore.textContent = highScore.toLocaleString('pt-BR');
+
+        // Game State
+        let gameState = 'START'; // 'START', 'PLAYING', 'CRASHING', 'GAMEOVER'
+        let lastTime = performance.now();
+
+        // World Metrics (recalculated on resize)
+        let W = 1280;
+        let H = 720;
+        let groundY = 580;
+
+        // Runner Progression & Speed Ramps
+        let score = 0;
+        let distance = 0;
+        let bananasCollected = 0;
+        let baseSpeed = 450; // px per second
+        let currentSpeed = 450;
+        let maxSpeed = 1120;
+        let speedMultiplier = 1.0;
+
+        // Combo System
+        let combo = 1;
+        let maxSessionCombo = 1;
+        let comboTimer = 0;
+        const COMBO_MAX_TIME = 3.6; // seconds before combo decays
+
+        // Camera Shake & Visual Impact
+        let shakeTime = 0;
+        let shakeMagnitude = 0;
+
+        function triggerCameraShake(magnitude, duration) {
+            shakeMagnitude = Math.max(shakeMagnitude, magnitude);
+            shakeTime = Math.max(shakeTime, duration);
+        }
+
+        /**
+         * GORILLA CHARACTER OBJECT (Articulated Procedural Weight & Physics)
+         */
+        const gorilla = {
+            x: 190,
+            y: 0, // relative to groundY
+            vy: 0,
+            width: 86,
+            height: 92,
+            normalHeight: 92,
+            slideHeight: 48,
+            isGrounded: true,
+            isSliding: false,
+            slideTimer: 0,
+            maxSlideDuration: 0.68,
+            jumpHoldTimer: 0,
+            isHoldingJump: false,
+            gaitPhase: 0,
+            lastStepPhase: 0,
+            squashX: 1,
+            squashY: 1,
+            rollAngle: 0,
+            crashTimer: 0,
+            crashVx: 0,
+
+            reset() {
+                this.x = Math.min(Math.max(W * 0.17, 110), 230);
+                this.y = 0;
+                this.vy = 0;
+                this.isGrounded = true;
+                this.isSliding = false;
+                this.slideTimer = 0;
+                this.jumpHoldTimer = 0;
+                this.isHoldingJump = false;
+                this.gaitPhase = 0;
+                this.squashX = 1;
+                this.squashY = 1;
+                this.rollAngle = 0;
+                this.crashTimer = 0;
+            },
+
+            jump() {
+                if (gameState !== 'PLAYING') return;
+                // Cancel slide immediately if jumping from a slide
+                if (this.isSliding) {
+                    this.isSliding = false;
+                    this.slideTimer = 0;
+                }
+                if (this.isGrounded) {
+                    this.isGrounded = false;
+                    this.vy = -790; // Strong primal leap
+                    this.isHoldingJump = true;
+                    this.jumpHoldTimer = 0.19; // Hold window for higher jump
+                    this.squashX = 0.82;
+                    this.squashY = 1.24;
+                    sound.playJump();
+                    spawnDustBurst(this.x, groundY, 10, '#854d0e');
+                }
+            },
+
+            slide() {
+                if (gameState !== 'PLAYING') return;
+                if (!this.isGrounded) {
+                    // Fast dive slam if triggered mid-air!
+                    this.vy = Math.max(this.vy, 1150);
+                    this.isHoldingJump = false;
+                }
+                if (!this.isSliding) {
+                    this.isSliding = true;
+                    this.slideTimer = this.maxSlideDuration;
+                    this.squashX = 1.28;
+                    this.squashY = 0.72;
+                    this.rollAngle = 0;
+                    sound.playSlide();
+                    spawnDustBurst(this.x + 20, groundY, 8, '#65a30d');
+                } else {
+                    // Extend slide slightly on re-tap
+                    this.slideTimer = Math.min(this.slideTimer + 0.25, this.maxSlideDuration);
+                }
+            },
+
+            getHitbox() {
+                const currentH = this.isSliding ? this.slideHeight : this.normalHeight;
+                const currentW = this.isSliding ? 92 : 74;
+                return {
+                    x: this.x - currentW * 0.42,
+                    y: groundY + this.y - currentH + 8,
+                    w: currentW * 0.84,
+                    h: currentH - 12
+                };
+            },
+
+            update(dt) {
+                // Springy squash & stretch recovery
+                this.squashX += (1 - this.squashX) * Math.min(1, dt * 14);
+                this.squashY += (1 - this.squashY) * Math.min(1, dt * 14);
+
+                if (gameState === 'CRASHING') {
+                    this.crashTimer += dt;
+                    this.x += this.crashVx * dt;
+                    this.crashVx *= Math.pow(0.2, dt);
+                    this.y += this.vy * dt;
+                    this.vy += 2100 * dt;
+                    if (this.y >= 0) {
+                        if (this.vy > 200) {
+                            this.vy = -this.vy * 0.35;
+                            triggerCameraShake(8, 0.15);
+                            spawnDustBurst(this.x, groundY, 12, '#78350f');
+                        } else {
+                            this.y = 0;
+                            this.vy = 0;
+                        }
+                    }
+                    return;
+                }
+
+                // Variable Jump Height when holding Jump key/touch
+                if (this.isHoldingJump && this.jumpHoldTimer > 0 && this.vy < 0) {
+                    this.vy -= 1450 * dt;
+                    this.jumpHoldTimer -= dt;
+                }
+
+                // Gravity
+                if (!this.isGrounded) {
+                    const gravity = this.vy > 0 ? 2550 : 2150;
+                    this.vy += gravity * dt;
+                    this.y += this.vy * dt;
+
+                    // Landing detection
+                    if (this.y >= 0) {
+                        const impactSpeed = this.vy;
+                        this.y = 0;
+                        this.vy = 0;
+                        this.isGrounded = true;
+                        this.isHoldingJump = false;
+
+                        // Heavy King Kong landing impact!
+                        const heavyFactor = Math.min(impactSpeed / 950, 1.4);
+                        this.squashX = 1 + 0.32 * heavyFactor;
+                        this.squashY = 1 - 0.28 * heavyFactor;
+                        triggerCameraShake(7 * heavyFactor, 0.18);
+                        sound.playHeavyLand();
+                        spawnShockwave(this.x, groundY);
+                        spawnDustBurst(this.x, groundY, Math.floor(16 * heavyFactor), '#a16207');
+                    }
+                } else {
+                    // Galloping quadruped cycle on ground
+                    const cycleSpeed = (currentSpeed / 450) * 11.5;
+                    const prevPhase = this.gaitPhase;
+                    this.gaitPhase += cycleSpeed * dt;
+
+                    // Trigger rhythmic knuckle-walk footsteps twice per gait cycle
+                    if (Math.floor(this.gaitPhase / Math.PI) !== Math.floor(prevPhase / Math.PI) && !this.isSliding) {
+                        sound.playFootstep(speedMultiplier);
+                        spawnDustBurst(this.x - 15, groundY, 3, '#713f12');
+                    }
+                }
+
+                // Slide Timer
+                if (this.isSliding) {
+                    this.slideTimer -= dt;
+                    this.rollAngle += dt * 14;
+                    if (Math.random() < 0.45 && this.isGrounded) {
+                        spawnDustBurst(this.x - 25, groundY, 1, '#84cc16');
+                    }
+                    if (this.slideTimer <= 0) {
+                        this.isSliding = false;
+                        this.squashX = 0.9;
+                        this.squashY = 1.12;
+                    }
+                }
+            },
+
+            draw(ctx) {
+                ctx.save();
+                const drawX = this.x;
+                const drawY = groundY + this.y;
+
+                // Ground shadow that scales with height
+                const heightRatio = Math.max(0.25, 1 - Math.abs(this.y) / 280);
+                ctx.fillStyle = `rgba(3, 12, 7, ${0.55 * heightRatio})`;
+                ctx.beginPath();
+                ctx.ellipse(drawX, groundY + 4, 46 * heightRatio * this.squashX, 11 * heightRatio, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.translate(drawX, drawY);
+                ctx.scale(this.squashX, this.squashY);
+
+                if (gameState === 'CRASHING') {
+                    // Knocked-back stunned Gorilla pose
+                    ctx.rotate(-0.45);
+                    this.drawArticulatedGorilla(ctx, true);
+                } else if (this.isSliding) {
+                    // Low primal tuck / knuckle-slide under obstacles
+                    this.drawSlidingGorilla(ctx);
+                } else {
+                    // Full articulated quadruped King Kong gallop & leap
+                    this.drawArticulatedGorilla(ctx, false);
+                }
+
+                ctx.restore();
+            },
+
+            drawSlidingGorilla(ctx) {
+                const bob = Math.sin(this.gaitPhase * 2) * 3;
+                ctx.save();
+                ctx.translate(0, -26 + bob);
+
+                // Speed aura streaks around sliding gorilla
+                ctx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(4, 0, 38, -0.6, 1.8);
+                ctx.stroke();
+
+                // Massive curved silverback torso tucked low
+                const silverGrad = ctx.createLinearGradient(-35, -24, 25, 22);
+                silverGrad.addColorStop(0, '#64748b');
+                silverGrad.addColorStop(0.55, '#334155');
+                silverGrad.addColorStop(1, '#0f172a');
+
+                ctx.fillStyle = silverGrad;
+                ctx.beginPath();
+                ctx.ellipse(-4, 2, 42, 24, -0.12, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tucked powerful hind leg pushing dust
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.roundRect(-42, 4, 28, 16, 8);
+                ctx.fill();
+
+                // Forward armored forearm shielding head
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.roundRect(10, -8, 36, 22, 10);
+                ctx.fill();
+
+                // Fierce head tucked forward
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(28, -6, 16, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glowing amber primal eye
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(36, -9, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            },
+
+            drawArticulatedGorilla(ctx, isStunned) {
+                const phase = this.gaitPhase;
+                const inAir = !this.isGrounded && !isStunned;
+
+                // Calculate joint angles based on galloping gait or jump pose
+                const bodyBob = inAir ? -6 : Math.abs(Math.sin(phase)) * -12;
+                const spineTilt = inAir
+                    ? Math.min(Math.max(this.vy * 0.0005, -0.35), 0.28)
+                    : -0.22 + Math.cos(phase) * 0.08;
+
+                // Limb swing angles (Gorilla bounding rhythm: back legs together-ish, massive front arms reaching)
+                const backLegSwingA = inAir ? 0.55 : Math.sin(phase) * 0.65;
+                const backLegSwingB = inAir ? 0.35 : Math.sin(phase + 0.5) * 0.65;
+                const frontArmSwingA = inAir ? -0.65 : Math.sin(phase + Math.PI * 0.85) * 0.72;
+                const frontArmSwingB = inAir ? -0.35 : Math.sin(phase + Math.PI * 1.15) * 0.72;
+
+                ctx.save();
+                ctx.translate(0, -48 + bodyBob);
+                ctx.rotate(spineTilt);
+
+                // --- 1. FAR SIDE LIMBS (Darker for depth) ---
+                this.drawHindLeg(ctx, -26, 12, backLegSwingB, '#0f172a', '#1e293b');
+                this.drawForeArm(ctx, 20, -14, frontArmSwingB, '#0f172a', '#1e293b');
+
+                // --- 2. MASSIVE SILVERBACK TORSO & SHOULDERS ---
+                const torsoGrad = ctx.createLinearGradient(-34, -36, 20, 26);
+                torsoGrad.addColorStop(0, '#94a3b8'); // Silverback highlight
+                torsoGrad.addColorStop(0.38, '#475569');
+                torsoGrad.addColorStop(1, '#1e293b');
+
+                ctx.fillStyle = torsoGrad;
+                ctx.beginPath();
+                // Broad chest tapering to sturdy pelvis
+                ctx.moveTo(-36, 8);
+                ctx.quadraticCurveTo(-24, -32, 16, -30);
+                ctx.quadraticCurveTo(38, -26, 32, 6);
+                ctx.quadraticCurveTo(8, 22, -28, 18);
+                ctx.closePath();
+                ctx.fill();
+
+                // Chest pectoral plate detail
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.ellipse(20, -6, 14, 16, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // --- 3. GORILLA HEAD, CREST & JAW ---
+                ctx.save();
+                const headNod = inAir ? -0.15 : Math.sin(phase * 2) * 0.06;
+                ctx.translate(28, -22);
+                ctx.rotate(headNod - spineTilt * 0.6);
+
+                // Sagittal crest & skull
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.moveTo(-14, 6);
+                ctx.quadraticCurveTo(-16, -22, 4, -20);
+                ctx.quadraticCurveTo(20, -16, 22, 4);
+                ctx.quadraticCurveTo(18, 16, -6, 12);
+                ctx.closePath();
+                ctx.fill();
+
+                // Brow ridge & muzzle
+                ctx.fillStyle = '#090d16';
+                ctx.beginPath();
+                ctx.roundRect(6, -10, 18, 18, 6);
+                ctx.fill();
+
+                // Heavy brow
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.roundRect(4, -14, 19, 6, 3);
+                ctx.fill();
+
+                // Eyes (dizzy X if crashed, fierce glowing gold if running)
+                if (isStunned) {
+                    ctx.strokeStyle = '#f87171';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(10, -9); ctx.lineTo(16, -3);
+                    ctx.moveTo(16, -9); ctx.lineTo(10, -3);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#facc15';
+                    ctx.beginPath();
+                    ctx.arc(14, -6, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Fang / Jaw roar when jumping or fast
+                if (inAir || speedMultiplier > 1.4 || isStunned) {
+                    ctx.fillStyle = '#7f1d1d';
+                    ctx.beginPath();
+                    ctx.roundRect(10, 1, 12, 6, 2);
+                    ctx.fill();
+                    // White canine fang
+                    ctx.fillStyle = '#fef9c3';
+                    ctx.beginPath();
+                    ctx.moveTo(18, 1);
+                    ctx.lineTo(21, 5);
+                    ctx.lineTo(16, 3);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // --- 4. NEAR SIDE POWERFUL LIMBS ---
+                this.drawHindLeg(ctx, -22, 14, backLegSwingA, '#1e293b', '#334155');
+                this.drawForeArm(ctx, 16, -12, frontArmSwingA, '#1e293b', '#475569');
+
+                ctx.restore();
+            },
+
+            drawHindLeg(ctx, hipX, hipY, angle, mainColor, highlightColor) {
+                ctx.save();
+                ctx.translate(hipX, hipY);
+                ctx.rotate(angle);
+
+                // Thigh
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.roundRect(-10, -4, 20, 26, 9);
+                ctx.fill();
+
+                // Calf & foot
+                ctx.translate(0, 18);
+                ctx.rotate(-Math.abs(angle) * 0.45 + 0.2);
+                ctx.fillStyle = highlightColor;
+                ctx.beginPath();
+                ctx.roundRect(-8, 0, 17, 22, 7);
+                ctx.fill();
+
+                ctx.restore();
+            },
+
+            drawForeArm(ctx, shoulderX, shoulderY, angle, mainColor, highlightColor) {
+                ctx.save();
+                ctx.translate(shoulderX, shoulderY);
+                ctx.rotate(angle);
+
+                // Huge upper arm / shoulder deltoid
+                ctx.fillStyle = highlightColor;
+                ctx.beginPath();
+                ctx.roundRect(-13, -8, 26, 34, 12);
+                ctx.fill();
+
+                // Massive forearm & heavy knuckles
+                ctx.translate(2, 22);
+                ctx.rotate(-0.35 + angle * 0.25);
+                ctx.fillStyle = mainColor;
+                ctx.beginPath();
+                ctx.roundRect(-12, -2, 25, 34, 10);
+                ctx.fill();
+
+                // Knuckle fist pad
+                ctx.fillStyle = '#090d16';
+                ctx.beginPath();
+                ctx.roundRect(-10, 24, 24, 12, 6);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        };
+
+        /**
+         * ============================================================================
+         * PROCEDURAL OBSTACLES, COLLECTIBLES & PARTICLES
+         * ============================================================================
+         */
+        let obstacles = [];
+        let collectibles = [];
+        let particles = [];
+        let shockwaves = [];
+        let floatingTexts = [];
+        let obstacleSpawnTimer = 0;
+
+        // Parallax Jungle Background Layers
+        let bgTemplePillars = [];
+        let bgMidTrees = [];
+        let bgHangingVines = [];
+        let bgSunbeams = [];
+        let groundScrollOffset = 0;
+
+        function initEnvironment() {
+            bgTemplePillars = [];
+            bgMidTrees = [];
+            bgHangingVines = [];
+            bgSunbeams = [];
+
+            for (let i = 0; i < 6; i++) {
+                bgTemplePillars.push({
+                    x: i * 320 + Math.random() * 90,
+                    w: 75 + Math.random() * 55,
+                    h: 180 + Math.random() * 140,
+                    type: Math.random() > 0.5 ? 'arch' : 'statue'
+                });
+            }
+            for (let i = 0; i < 9; i++) {
+                bgMidTrees.push({
+                    x: i * 210 + Math.random() * 60,
+                    w: 48 + Math.random() * 45,
+                    foliageR: 85 + Math.random() * 40
+                });
+            }
+            for (let i = 0; i < 12; i++) {
+                bgHangingVines.push({
+                    x: i * 160 + Math.random() * 80,
+                    length: 90 + Math.random() * 140,
+                    swayOffset: Math.random() * Math.PI * 2
+                });
+            }
+            for (let i = 0; i < 4; i++) {
+                bgSunbeams.push({
+                    x: i * 380 + 100,
+                    width: 90 + Math.random() * 80,
+                    alpha: 0.04 + Math.random() * 0.05
+                });
+            }
+        }
+
+        function spawnDustBurst(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 30,
+                    y: y - Math.random() * 10,
+                    vx: -currentSpeed * (0.2 + Math.random() * 0.4) + (Math.random() - 0.5) * 140,
+                    vy: -40 - Math.random() * 180,
+                    size: 4 + Math.random() * 7,
+                    life: 1,
+                    decay: 1.6 + Math.random() * 1.4,
+                    color: color
+                });
+            }
+        }
+
+        function spawnShockwave(x, y) {
+            shockwaves.push({
+                x,
+                y,
+                radiusX: 15,
+                radiusY: 4,
+                alpha: 0.85
+            });
+        }
+
+        function spawnFloatingText(text, x, y, color = '#fde047', scale = 1) {
+            floatingTexts.push({
+                text,
+                x,
+                y,
+                vy: -95,
+                life: 1.0,
+                color,
+                scale
+            });
+        }
+
+        /**
+         * Procedural Obstacle Generator with progressive density & patterns
+         */
+        function spawnObstaclePattern() {
+            const spawnX = W + 120;
+            const rand = Math.random();
+
+            // Choose between:
+            // 1. Giant Twisted Roots (Low jump)
+            // 2. Ancient Mossy Temple Ruin Block / Totem (High jump)
+            // 3. Low-Hanging Thorny Canopy Branch / Stone Archway (Slide under)
+            let obsType = 'ROOTS';
+            if (rand < 0.36) {
+                obsType = 'ROOTS';
+            } else if (rand < 0.68) {
+                obsType = 'OVERHEAD_VINES';
+            } else {
+                obsType = 'TEMPLE_TOTEM';
+            }
+
+            if (obsType === 'ROOTS') {
+                const w = 68;
+                const h = 62;
+                obstacles.push({
+                    type: 'ROOTS',
+                    x: spawnX,
+                    y: groundY - h,
+                    w,
+                    h,
+                    passed: false,
+                    closeCallChecked: false
+                });
+
+                // Arc of Golden Bananas above the roots to reward jumping!
+                for (let i = -1; i <= 1; i++) {
+                    collectibles.push({
+                        type: 'BANANA',
+                        x: spawnX + w / 2 + i * 52,
+                        y: groundY - 145 - (1 - Math.abs(i)) * 28,
+                        r: 18,
+                        collected: false,
+                        bobPhase: i * 0.8
+                    });
+                }
+            } else if (obsType === 'TEMPLE_TOTEM') {
+                const w = 62;
+                const h = 92; // Requires a solid / held jump
+                obstacles.push({
+                    type: 'TEMPLE_TOTEM',
+                    x: spawnX,
+                    y: groundY - h,
+                    w,
+                    h,
+                    passed: false,
+                    closeCallChecked: false
+                });
+
+                // Golden Relic high above totem
+                collectibles.push({
+                    type: 'RELIC',
+                    x: spawnX + w / 2,
+                    y: groundY - 195,
+                    r: 22,
+                    collected: false,
+                    bobPhase: 0
+                });
+            } else if (obsType === 'OVERHEAD_VINES') {
+                // Hangs from top down to 58px above ground -> Must slide under!
+                const clearance = 56;
+                const bottomY = groundY - clearance;
+                const w = 105;
+                obstacles.push({
+                    type: 'OVERHEAD_VINES',
+                    x: spawnX,
+                    y: 0,
+                    w,
+                    h: bottomY,
+                    clearanceY: bottomY,
+                    passed: false,
+                    closeCallChecked: false
+                });
+
+                // Low line of bananas along the slide path!
+                for (let i = 0; i < 3; i++) {
+                    collectibles.push({
+                        type: 'BANANA',
+                        x: spawnX + 15 + i * 48,
+                        y: groundY - 28,
+                        r: 18,
+                        collected: false,
+                        bobPhase: i * 0.6
+                    });
+                }
+            }
+        }
+
+        function addCombo(amount = 1, x = gorilla.x, y = groundY - 110, label = '') {
+            combo = Math.min(combo + amount, 25);
+            maxSessionCombo = Math.max(maxSessionCombo, combo);
+            comboTimer = COMBO_MAX_TIME;
+
+            if (combo > bestComboRecord) {
+                bestComboRecord = combo;
+                localStorage.setItem(STORAGE_BEST_COMBO, String(bestComboRecord));
+            }
+
+            if (label) {
+                spawnFloatingText(`${label} x${combo}`, x, y, '#a3e635', 1.15);
+            }
+            updateHUD();
+        }
+
+        function updateHUD() {
+            hudScore.textContent = Math.floor(score).toLocaleString('pt-BR');
+            hudHighScore.textContent = Math.floor(Math.max(score, highScore)).toLocaleString('pt-BR');
+            hudSpeed.textContent = `${speedMultiplier.toFixed(1)}x`;
+            hudBananas.textContent = bananasCollected.toLocaleString('pt-BR');
+
+            if (combo > 1 && comboTimer > 0) {
+                comboContainer.classList.remove('opacity-0');
+                hudCombo.textContent = `x${combo}`;
+                const pct = Math.max(0, (comboTimer / COMBO_MAX_TIME) * 100);
+                hudComboBar.style.width = `${pct}%`;
+            } else {
+                comboContainer.classList.add('opacity-0');
+            }
+        }
+
+        /**
+         * ============================================================================
+         * GAME LOOP: UPDATE & RENDER
+         * ============================================================================
+         */
+        function resetGame() {
+            sound.init();
+            score = 0;
+            distance = 0;
+            bananasCollected = 0;
+            currentSpeed = baseSpeed;
+            speedMultiplier = 1.0;
+            combo = 1;
+            maxSessionCombo = 1;
+            comboTimer = 0;
+            obstacles = [];
+            collectibles = [];
+            particles = [];
+            shockwaves = [];
+            floatingTexts = [];
+            obstacleSpawnTimer = 0.9;
+            gorilla.reset();
+            gameState = 'PLAYING';
+
+            startModal.classList.add('hidden');
+            gameOverModal.classList.add('hidden');
+            gameOverModal.classList.remove('flex');
+            updateHUD();
+        }
+
+        function triggerGameOver() {
+            gameState = 'CRASHING';
+            gorilla.crashTimer = 0;
+            gorilla.crashVx = -260;
+            gorilla.vy = -420;
+            sound.playCrash();
+            triggerCameraShake(18, 0.45);
+            spawnDustBurst(gorilla.x + 25, groundY - 40, 28, '#f59e0b');
+
+            const finalRounded = Math.floor(score);
+            const isNewRecord = finalRounded > highScore;
+            if (isNewRecord) {
+                highScore = finalRounded;
+                localStorage.setItem(STORAGE_HIGH_SCORE, String(highScore));
+            }
+
+            setTimeout(() => {
+                if (gameState !== 'CRASHING') return;
+                gameState = 'GAMEOVER';
+                finalScoreEl.textContent = finalRounded.toLocaleString('pt-BR');
+                finalHighScoreEl.textContent = highScore.toLocaleString('pt-BR');
+                finalBananasEl.textContent = bananasCollected.toLocaleString('pt-BR');
+                finalComboEl.textContent = `x${maxSessionCombo}`;
+
+                if (isNewRecord && finalRounded > 0) {
+                    newRecordBadge.classList.remove('hidden');
+                } else {
+                    newRecordBadge.classList.add('hidden');
+                }
+
+                gameOverModal.classList.remove('hidden');
+                gameOverModal.classList.add('flex');
+            }, 850);
+        }
+
+        function checkAABB(a, b) {
+            return (
+                a.x < b.x + b.w &&
+                a.x + a.w > b.x &&
+                a.y < b.y + b.h &&
+                a.y + a.h > b.y
+            );
+        }
+
+        function updateGame(dt) {
+            // Camera shake decay
+            if (shakeTime > 0) {
+                shakeTime -= dt;
+                if (shakeTime <= 0) shakeMagnitude = 0;
+            }
+
+            // Ambient background scrolling even on menu
+            const activeSpeed = gameState === 'PLAYING' ? currentSpeed : (gameState === 'START' ? 140 : 0);
+            groundScrollOffset = (groundScrollOffset + activeSpeed * dt) % 120;
+
+            bgTemplePillars.forEach(p => {
+                p.x -= activeSpeed * 0.18 * dt;
+                if (p.x + p.w < -60) p.x = W + 120 + Math.random() * 140;
+            });
+            bgMidTrees.forEach(t => {
+                t.x -= activeSpeed * 0.42 * dt;
+                if (t.x + t.foliageR < -80) t.x = W + 120 + Math.random() * 100;
+            });
+            bgHangingVines.forEach(v => {
+                v.x -= activeSpeed * 0.72 * dt;
+                if (v.x < -60) v.x = W + 80 + Math.random() * 120;
+            });
+
+            if (gameState !== 'PLAYING') {
+                if (gameState === 'START') {
+                    gorilla.gaitPhase += dt * 4.5;
+                } else if (gameState === 'CRASHING') {
+                    gorilla.update(dt);
+                }
+                updateEffects(dt);
+                return;
+            }
+
+            // Speed ramp & progressive difficulty
+            currentSpeed = Math.min(maxSpeed, currentSpeed + 14.5 * dt);
+            speedMultiplier = currentSpeed / baseSpeed;
+
+            // Distance & Combo Score calculation
+            const distDelta = (currentSpeed * dt) * 0.045;
+            distance += distDelta;
+            score += distDelta * combo;
+
+            // Combo Timer decay
+            if (combo > 1) {
+                comboTimer -= dt;
+                if (comboTimer <= 0) {
+                    combo = 1;
+                    comboTimer = 0;
+                }
+            }
+
+            // Update Gorilla physics & animation
+            gorilla.update(dt);
+            const pBox = gorilla.getHitbox();
+
+            // Procedural Obstacle Spawning (denser as speed increases)
+            obstacleSpawnTimer -= dt;
+            if (obstacleSpawnTimer <= 0) {
+                spawnObstaclePattern();
+                // Minimum safe reaction gap scales down smoothly as speed increases
+                const minTime = Math.max(0.64, 1.38 - (speedMultiplier - 1) * 0.38);
+                const maxTime = Math.max(0.95, 1.95 - (speedMultiplier - 1) * 0.45);
+                obstacleSpawnTimer = minTime + Math.random() * (maxTime - minTime);
+            }
+
+            // Update Obstacles & Collisions
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= currentSpeed * dt;
+
+                // Collision Box slightly forgiving for fluid Temple Run feel
+                const obsBox = {
+                    x: obs.x + 8,
+                    y: obs.y + 6,
+                    w: obs.w - 16,
+                    h: obs.h - 10
+                };
+
+                if (checkAABB(pBox, obsBox)) {
+                    triggerGameOver();
+                    return;
+                }
+
+                // Check when player clears an obstacle for Close-Call / Dodge Bonus
+                if (!obs.passed && obs.x + obs.w < pBox.x) {
+                    obs.passed = true;
+                    const points = Math.round(25 * combo);
+                    score += points;
+
+                    // Refresh combo timer on every clean obstacle dodge!
+                    if (combo > 1) {
+                        comboTimer = Math.min(COMBO_MAX_TIME, comboTimer + 1.1);
+                    }
+
+                    // Close-call check (e.g. sliding right under vines or grazing roots)
+                    const verticalClearance = obs.type === 'OVERHEAD_VINES'
+                        ? Math.abs(pBox.y - (obs.y + obs.h))
+                        : Math.abs((pBox.y + pBox.h) - obs.y);
+
+                    if (verticalClearance < 38) {
+                        addCombo(1, gorilla.x + 20, groundY - 120, 'RASANTE!');
+                    }
+                }
+
+                if (obs.x + obs.w < -150) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Update Collectibles (Bananas & Relics)
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.x -= currentSpeed * dt;
+                item.bobPhase += dt * 5;
+
+                const itemBox = {
+                    x: item.x - item.r,
+                    y: item.y - item.r,
+                    w: item.r * 2,
+                    h: item.r * 2
+                };
+
+                if (!item.collected && checkAABB(pBox, itemBox)) {
+                    item.collected = true;
+                    bananasCollected += item.type === 'RELIC' ? 3 : 1;
+                    addCombo(item.type === 'RELIC' ? 2 : 1);
+
+                    const bonus = (item.type === 'RELIC' ? 150 : 50) * combo;
+                    score += bonus;
+
+                    sound.playCollect(combo, item.type === 'RELIC');
+                    spawnDustBurst(item.x, item.y, 10, '#facc15');
+                    spawnFloatingText(
+                        item.type === 'RELIC' ? `🗿 +${bonus} (x${combo})` : `🍌 +${bonus}`,
+                        item.x,
+                        item.y - 15,
+                        item.type === 'RELIC' ? '#fde047' : '#bef264',
+                        item.type === 'RELIC' ? 1.25 : 1.0
+                    );
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                if (item.x < -100) {
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            updateEffects(dt);
+            updateHUD();
+        }
+
+        function updateEffects(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 480 * dt;
+                p.life -= p.decay * dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radiusX += 340 * dt;
+                sw.radiusY += 65 * dt;
+                sw.alpha -= 2.4 * dt;
+                if (sw.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy * dt;
+                ft.life -= 1.15 * dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * RENDERING PIPELINE (Parallax Jungle, Obstacles, Gorilla, Speed FX)
+         * ============================================================================
+         */
+        function drawGame() {
+            ctx.save();
+
+            // Apply Camera Shake on heavy landings or collisions
+            if (shakeTime > 0 && shakeMagnitude > 0) {
+                const dx = (Math.random() - 0.5) * shakeMagnitude * 2;
+                const dy = (Math.random() - 0.5) * shakeMagnitude * 2;
+                ctx.translate(dx, dy);
+            }
+
+            // 1. Deep Jungle Canopy Sky Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+            skyGrad.addColorStop(0, '#04120b');
+            skyGrad.addColorStop(0.45, '#0b291a');
+            skyGrad.addColorStop(1, '#18452c');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // 2. Volumetric Jungle Sunbeams
+            bgSunbeams.forEach(beam => {
+                ctx.save();
+                const grad = ctx.createLinearGradient(beam.x, 0, beam.x - 140, groundY);
+                grad.addColorStop(0, `rgba(253, 224, 71, ${beam.alpha})`);
+                grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(beam.x, 0);
+                ctx.lineTo(beam.x + beam.width, 0);
+                ctx.lineTo(beam.x + beam.width - 180, groundY);
+                ctx.lineTo(beam.x - 180, groundY);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 3. Far Layer: Ancient Temple Ruins Silhouettes
+            ctx.fillStyle = '#0d2619';
+            bgTemplePillars.forEach(p => {
+                const py = groundY - p.h;
+                ctx.fillRect(p.x, py, p.w, p.h);
+                // Stepped temple crown
+                ctx.fillRect(p.x - 10, py, p.w + 20, 18);
+                ctx.fillRect(p.x + 8, py - 16, p.w - 16, 16);
+            });
+
+            // 4. Mid Layer: Dense Jungle Trees & Mist
+            bgMidTrees.forEach(t => {
+                // Trunk
+                ctx.fillStyle = '#11301f';
+                ctx.fillRect(t.x, 0, t.w, groundY);
+                // Canopy foliage clusters
+                ctx.fillStyle = '#0a2115';
+                ctx.beginPath();
+                ctx.arc(t.x + t.w / 2, 45, t.foliageR, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Atmospheric golden jungle mist near the ground
+            const fogGrad = ctx.createLinearGradient(0, groundY - 140, 0, groundY);
+            fogGrad.addColorStop(0, 'rgba(20, 83, 45, 0)');
+            fogGrad.addColorStop(1, 'rgba(22, 101, 52, 0.38)');
+            ctx.fillStyle = fogGrad;
+            ctx.fillRect(0, groundY - 140, W, 140);
+
+            // 5. Hanging Vines in Canopy
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 4;
+            const timeSec = performance.now() * 0.002;
+            bgHangingVines.forEach(v => {
+                const sway = Math.sin(timeSec + v.swayOffset) * 14;
+                ctx.beginPath();
+                ctx.moveTo(v.x, 0);
+                ctx.quadraticCurveTo(v.x + sway, v.length * 0.5, v.x + sway * 1.4, v.length);
+                ctx.stroke();
+            });
+
+            // 6. Ground Track (Temple Stones + Jungle Roots & Moss)
+            drawJungleGround();
+
+            // 7. Obstacles (Roots, Totems, Overhead Thorny Archways)
+            obstacles.forEach(obs => drawObstacle(obs));
+
+            // 8. Collectibles (Golden Bananas & Relics)
+            collectibles.forEach(item => drawCollectible(item));
+
+            // 9. Landing Shockwaves
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.strokeStyle = `rgba(250, 204, 21, ${sw.alpha})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(sw.x, sw.y, sw.radiusX, sw.radiusY, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 10. The Gorilla (King Kong Runner)
+            gorilla.draw(ctx);
+
+            // 11. Foreground Dust & Spark Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // 12. Floating Score & Combo Popups
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.font = `900 ${Math.round(20 * ft.scale)}px 'Bungee', cursive`;
+                ctx.fillStyle = ft.color;
+                ctx.strokeStyle = '#052e16';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = Math.max(0, ft.life);
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            // 13. High-Speed Wind Streaks when Speed Ramps Up
+            if (gameState === 'PLAYING' && speedMultiplier > 1.25) {
+                const streakAlpha = Math.min(0.35, (speedMultiplier - 1.25) * 0.3);
+                ctx.strokeStyle = `rgba(254, 249, 195, ${streakAlpha})`;
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 6; i++) {
+                    const sx = ((performance.now() * (1.8 + i * 0.3)) % (W + 300)) - 150;
+                    const sy = 80 + ((i * 117) % (groundY - 120));
+                    ctx.beginPath();
+                    ctx.moveTo(W - sx, sy);
+                    ctx.lineTo(W - sx + 95 * speedMultiplier, sy);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawJungleGround() {
+            // Soil underlayer
+            const soilGrad = ctx.createLinearGradient(0, groundY, 0, H);
+            soilGrad.addColorStop(0, '#3f230f');
+            soilGrad.addColorStop(0.3, '#271509');
+            soilGrad.addColorStop(1, '#0f0804');
+            ctx.fillStyle = soilGrad;
+            ctx.fillRect(0, groundY, W, H - groundY);
+
+            // Temple cobblestone slabs scrolling
+            ctx.fillStyle = '#475569';
+            for (let x = -groundScrollOffset; x < W + 120; x += 120) {
+                ctx.beginPath();
+                ctx.roundRect(x + 4, groundY + 6, 108, 22, 6);
+                ctx.fill();
+
+                // Mossy top turf strip
+                ctx.fillStyle = '#4d7c0f';
+                ctx.fillRect(x, groundY - 4, 120, 12);
+                ctx.fillStyle = '#65a30d';
+                ctx.fillRect(x + 12, groundY - 6, 65, 6);
+                ctx.fillStyle = '#475569';
+            }
+        }
+
+        function drawObstacle(obs) {
+            ctx.save();
+            if (obs.type === 'ROOTS') {
+                // Twisted gnarly jungle tree roots bursting from the ground
+                const cx = obs.x + obs.w / 2;
+                const bottom = groundY + 4;
+
+                ctx.fillStyle = '#5c3415';
+                ctx.strokeStyle = '#2e1808';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.moveTo(obs.x - 8, bottom);
+                ctx.quadraticCurveTo(obs.x + 10, obs.y + 10, cx - 6, obs.y);
+                ctx.quadraticCurveTo(cx + 12, obs.y + 18, cx + 14, obs.y + 6);
+                ctx.quadraticCurveTo(obs.x + obs.w - 4, obs.y + 24, obs.x + obs.w + 10, bottom);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Glowing warning amber thorns/moss highlights
+                ctx.fillStyle = '#a3e635';
+                ctx.beginPath();
+                ctx.arc(cx - 5, obs.y + 8, 5, 0, Math.PI * 2);
+                ctx.arc(cx + 12, obs.y + 14, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+            } else if (obs.type === 'TEMPLE_TOTEM') {
+                // Carved stone totem pillar requiring a high gorilla jump
+                const grad = ctx.createLinearGradient(obs.x, obs.y, obs.x + obs.w, obs.y + obs.h);
+                grad.addColorStop(0, '#94a3b8');
+                grad.addColorStop(0.5, '#475569');
+                grad.addColorStop(1, '#1e293b');
+
+                ctx.fillStyle = grad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(obs.x, obs.y, obs.w, obs.h, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                // Glowing ancient tiki eyes on the totem
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.rect(obs.x + 12, obs.y + 20, 14, 8);
+                ctx.rect(obs.x + obs.w - 26, obs.y + 20, 14, 8);
+                ctx.fill();
+
+                // Moss cap
+                ctx.fillStyle = '#65a30d';
+                ctx.beginPath();
+                ctx.roundRect(obs.x - 4, obs.y - 4, obs.w + 8, 12, 5);
+                ctx.fill();
+
+            } else if (obs.type === 'OVERHEAD_VINES') {
+                // Hanging stone archway & thorny canopy trunk (SLIDE UNDER)
+                const archBottom = obs.h;
+
+                // Vertical support vines/roots from canopy
+                ctx.fillStyle = '#3f230f';
+                ctx.fillRect(obs.x + 8, 0, obs.w - 16, archBottom - 24);
+
+                // Heavy thorny log / stone lintel at bottom of overhang
+                const logGrad = ctx.createLinearGradient(obs.x, archBottom - 44, obs.x, archBottom);
+                logGrad.addColorStop(0, '#365314');
+                logGrad.addColorStop(0.5, '#4d7c0f');
+                logGrad.addColorStop(1, '#1a2e05');
+
+                ctx.fillStyle = logGrad;
+                ctx.strokeStyle = '#eab308';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(obs.x, archBottom - 42, obs.w, 42, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                // Sharp hanging spikes/thorns at bottom to visually cue "DUCK/SLIDE!"
+                ctx.fillStyle = '#fde047';
+                for (let sx = obs.x + 14; sx < obs.x + obs.w - 10; sx += 22) {
+                    ctx.beginPath();
+                    ctx.moveTo(sx - 6, archBottom);
+                    ctx.lineTo(sx, archBottom + 9);
+                    ctx.lineTo(sx + 6, archBottom);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+
+        function drawCollectible(item) {
+            ctx.save();
+            const bobY = item.y + Math.sin(item.bobPhase) * 6;
+            ctx.translate(item.x, bobY);
+
+            // Golden aura glow
+            const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, item.r * 1.4);
+            glow.addColorStop(0, 'rgba(250, 204, 21, 0.55)');
+            glow.addColorStop(1, 'rgba(250, 204, 21, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, item.r * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (item.type === 'RELIC') {
+                // Golden Temple Idol Relic
+                ctx.fillStyle = '#facc15';
+                ctx.strokeStyle = '#854d0e';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(-12, -15, 24, 30, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(-4, -5, 2.5, 0, Math.PI * 2);
+                ctx.arc(4, -5, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Golden Jungle Banana Crescent
+                ctx.rotate(-0.35 + Math.sin(item.bobPhase * 0.7) * 0.15);
+                ctx.fillStyle = '#fde047';
+                ctx.strokeStyle = '#ca8a04';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 13, 0.25 * Math.PI, 1.35 * Math.PI, false);
+                ctx.quadraticCurveTo(-2, -2, 9, 9);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        /**
+         * ============================================================================
+         * RESPONSIVE CANVAS & INPUT CONTROLS (Keyboard, Touch, Swipe, Mouse)
+         * ============================================================================
+         */
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            W = Math.max(320, rect.width);
+            H = Math.max(260, rect.height);
+            canvas.width = W;
+            canvas.height = H;
+            groundY = Math.floor(H * 0.82);
+            gorilla.x = Math.min(Math.max(W * 0.17, 95), 230);
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawGame();
+        });
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (gameState === 'START' && (e.code === 'Space' || e.code === 'Enter')) {
+                resetGame();
+                return;
+            }
+            if (gameState === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) {
+                resetGame();
+                return;
+            }
+
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                if (!e.repeat) {
+                    sound.init();
+                    gorilla.jump();
+                    document.getElementById('btnJumpControl').classList.add('active-press');
+                }
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                sound.init();
+                gorilla.slide();
+                document.getElementById('btnSlideControl').classList.add('active-press');
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                gorilla.isHoldingJump = false;
+                document.getElementById('btnJumpControl').classList.remove('active-press');
+            }
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                document.getElementById('btnSlideControl').classList.remove('active-press');
+            }
+        });
+
+        // Dedicated Bottom Control Buttons (Mouse & Touch)
+        const btnJumpControl = document.getElementById('btnJumpControl');
+        const btnSlideControl = document.getElementById('btnSlideControl');
+
+        function bindActionButton(btn, onDown, onUp) {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                sound.init();
+                onDown();
+            });
+            btn.addEventListener('pointerup', (e) => {
+                e.preventDefault();
+                if (onUp) onUp();
+            });
+            btn.addEventListener('pointerleave', () => {
+                if (onUp) onUp();
+            });
+        }
+
+        bindActionButton(
+            btnJumpControl,
+            () => gorilla.jump(),
+            () => { gorilla.isHoldingJump = false; }
+        );
+        bindActionButton(
+            btnSlideControl,
+            () => gorilla.slide(),
+            null
+        );
+
+        // Direct Canvas One-Tap & Swipe Support
+        let touchStartY = null;
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            sound.init();
+            if (gameState !== 'PLAYING') return;
+            touchStartY = e.clientY;
+
+            const rect = canvas.getBoundingClientRect();
+            const relY = e.clientY - rect.top;
+            // Tap lower 25% of canvas to slide, upper 75% to jump
+            if (relY > rect.height * 0.78) {
+                gorilla.slide();
+            } else {
+                gorilla.jump();
+            }
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (touchStartY !== null && gameState === 'PLAYING') {
+                const dy = e.clientY - touchStartY;
+                if (dy > 38) {
+                    // Swipe down mid-air or on ground triggers immediate slide/slam!
+                    gorilla.slide();
+                    touchStartY = null;
+                }
+            }
+        });
+
+        canvas.addEventListener('pointerup', () => {
+            gorilla.isHoldingJump = false;
+            touchStartY = null;
+        });
+
+        // Modal & Audio Buttons
+        document.getElementById('btnStartGame').addEventListener('click', () => resetGame());
+        document.getElementById('btnRestartGame').addEventListener('click', () => resetGame());
+
+        document.getElementById('btnMute').addEventListener('click', () => {
+            sound.init();
+            const isMuted = sound.toggleMute();
+            document.getElementById('iconSoundOn').classList.toggle('hidden', isMuted);
+            document.getElementById('iconSoundOff').classList.toggle('hidden', !isMuted);
+        });
+
+        // Main Animation Loop
+        function gameLoop(now) {
+            const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+            lastTime = now;
+
+            updateGame(dt);
+            drawGame();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            resizeCanvas();
+            initEnvironment();
+            gorilla.reset();
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
